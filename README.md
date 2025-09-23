@@ -7,7 +7,7 @@ test video : https://youtu.be/2G1GnmDUAys
 
 How it works:
 
-Pico uses the Pio+DMA function to process each line produced by the emulator in real time. The line is scaled horizontally in the core 1. The core 0 takes care of emulating, producing audio and scaling vertically. image thus passes from 320 x 200 to 480 x 300. This operation costs a lot and to maintain high video performances, one frame is skipped. buttons 2=left+right, 3=up+down. Pin 25 is used by Mcume and SD for LED.
+Pico uses the Pio+DMA function to process each line produced by the emulator in real time. The line is scaled horizontally in the core 1. The core 0 takes care of emulating, producing audio and scaling vertically. image thus passes from 320 x 200 to 480 x 300. Ili 9486 LCD version is rather slow, to obtain real performance a frame is skipped. buttons 2=left+right, 3=up+down. Pin 25 is used by Mcume and SD for LED.
 
 SD card:
 
