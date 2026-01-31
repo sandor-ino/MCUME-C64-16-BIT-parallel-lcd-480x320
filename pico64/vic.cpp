@@ -9,9 +9,48 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b)) 
 
-#define GAMMA_R(v) (((v) * (v)) / 256)
-#define GAMMA_G(u) (((u) * (u)) / 256)
-#define GAMMA_B(z) (((z) * (z)) / 256)
+// Scegli una delle seguenti opzioni decommentando la linea corrispondente:
+
+// OPZIONE 1: Gamma originale (può saturare)
+//#define GAMMA_R(v) (((v) * (v)) / 256)
+//#define GAMMA_G(u) (((u) * (u)) / 256)
+//#define GAMMA_B(z) (((z) * (z)) / 256)
+
+// OPZIONE 2: Gamma ridotta 85% (meno saturazione)
+//#define GAMMA_R(v) ((((v) * (v)) / 256) * 85 / 100)
+//#define GAMMA_G(u) ((((u) * (u)) / 256) * 85 / 100)
+//#define GAMMA_B(z) ((((z) * (z)) / 256) * 85 / 100)
+
+// OPZIONE 3: Gamma ridotta 70% (ancora meno saturazione)
+//#define GAMMA_R(v) ((((v) * (v)) / 256) * 70 / 100)
+//#define GAMMA_G(u) ((((u) * (u)) / 256) * 70 / 100)
+//#define GAMMA_B(z) ((((z) * (z)) / 256) * 70 / 100)
+
+// OPZIONE 4: Gamma più dolce (radice quadrata approssimata)
+//#define GAMMA_R(v) (((v) * 181) / 256)
+//#define GAMMA_G(u) (((u) * 181) / 256)
+//#define GAMMA_B(z) (((z) * 181) / 256)
+
+// OPZIONE 5: Lineare ridotto 90%
+//#define GAMMA_R(v) ((v) * 90 / 100)
+//#define GAMMA_G(u) ((u) * 90 / 100)
+//#define GAMMA_B(z) ((z) * 90 / 100)
+
+// OPZIONE 6: Lineare ridotto 80%
+#define GAMMA_R(v) ((v) * 80 / 100)
+#define GAMMA_G(u) ((u) * 80 / 100)
+#define GAMMA_B(z) ((z) * 80 / 100)
+
+// OPZIONE 7: Lineare puro (senza correzione gamma)
+//#define GAMMA_R(v) (v)
+//#define GAMMA_G(u) (u)
+//#define GAMMA_B(z) (z)
+
+// OPZIONE 8: Gamma con clamp per evitare saturazione
+//#define GAMMA_CLAMP(x) ((x) > 255 ? 255 : (x))
+//#define GAMMA_R(v) GAMMA_CLAMP(((v) * (v)) / 256)
+//#define GAMMA_G(u) GAMMA_CLAMP(((u) * (u)) / 256)
+//#define GAMMA_B(z) GAMMA_CLAMP(((z) * (z)) / 256)
 
 #define PALETTE(r, g, b) \ 
   (RGBVAL16(GAMMA_R(r), GAMMA_G(g), GAMMA_B(b)))
@@ -115,7 +154,7 @@ __attribute__((section(".time_critical"))) void fastFillLineNoSprites(tpixel * p
 __attribute__((section(".time_critical"))) void mode0(tpixel *p, const tpixel *pe, uint16_t *spl, const uint16_t vc) {
     uint8_t chr, pixel;
     uint8_t fgcol;
-    uint8_t bgcol = cpu.vic.B0C & 0x0F; // Assicuriamoci che sia un indice di colore valido
+    uint8_t bgcol = cpu.vic.B0C & 0x0F;
     uint8_t x = 0;
 
     CHARSETPTR();
@@ -124,7 +163,7 @@ __attribute__((section(".time_critical"))) void mode0(tpixel *p, const tpixel *p
         do {
             BADLINE(x);
             chr = cpu.vic.charsetPtr[cpu.vic.lineMemChr[x] * 8];
-            fgcol = cpu.vic.lineMemCol[x] & 0x0F; // Assicuriamoci che sia un indice di colore valido
+            fgcol = cpu.vic.lineMemCol[x] & 0x0F;
             x++;
             
             unsigned m = min(8, pe - p);
@@ -145,7 +184,7 @@ __attribute__((section(".time_critical"))) void mode0(tpixel *p, const tpixel *p
                         pixel = spritepixel;
                     }
                 } else {
-                    pixel = (chr & 0x80) ? fgcol : bgcol;
+                    pixel = (chr & 0x80) ? fgcol : cpu.vic.B0C;
                 }
                 *p++ = pixel;
                 chr = chr << 1;
@@ -167,7 +206,7 @@ __attribute__((section(".time_critical"))) void mode0(tpixel *p, const tpixel *p
             *p++ = (chr & 0x04) ? fgcol : bgcol;
             *p++ = (chr & 0x02) ? fgcol : bgcol;
             *p++ = (chr & 0x01) ? fgcol : bgcol;
-        };
+        }
         
         while (p < pe) {
             BADLINE(x);
@@ -183,7 +222,7 @@ __attribute__((section(".time_critical"))) void mode0(tpixel *p, const tpixel *p
             *p++ = (chr & 0x04) ? fgcol : bgcol; if (p >= pe) break;
             *p++ = (chr & 0x02) ? fgcol : bgcol; if (p >= pe) break;
             *p++ = (chr & 0x01) ? fgcol : bgcol;
-        };
+        }
     }
     while (x<40) {BADLINE(x); x++;}
 
@@ -316,23 +355,44 @@ uint8_t bgcol = cpu.vic.B0C & 0x0F;
                 pixel = colors[(chr >> 2) & 0x03]; *p++ = pixel; *p++ = pixel;
                 pixel = colors[chr & 0x03];       *p++ = pixel; *p++ = pixel;
             }
-        };
-        // Gestione del resto della linea
+        }
+        
+        // Gestione ultimo carattere parziale
         while (p < pe) {
-                        BADLINE(x);
-            chr = cpu.vic.charsetPtr[cpu.vic.lineMemChr[x] * 8];
-            uint8_t fgcol = cpu.vic.lineMemCol[x] & 0x0F;
+            uint8_t c;
+            colors[0] = cpu.vic.B0C & 0x0F;
+
+            if (cpu.vic.idle) {
+                cpu_clock(1);
+                c = colors[1] = colors[2] = colors[3] = 0;
+                chr = cpu.RAM[cpu.vic.bank + 0x3fff];
+            } else {
+                BADLINE(x);
+                colors[1] = cpu.vic.R[0x22] & 0x0F;
+                colors[2] = cpu.vic.R[0x23] & 0x0F;
+                chr = cpu.vic.charsetPtr[cpu.vic.lineMemChr[x] * 8];
+                c = cpu.vic.lineMemCol[x];
+            }
             x++;
-            
-            *p++ = (chr & 0x80) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x40) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x20) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x10) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x08) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x04) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x02) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x01) ? fgcol : bgcol;
-        };
+
+            if ((c & 0x08) == 0) { // HIRES
+                uint8_t fgcol = c & 0x07;
+                *p++ = (chr & 0x80) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x40) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x20) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x10) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x08) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x04) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x02) ? fgcol : colors[0]; if (p >= pe) break;
+                *p++ = (chr & 0x01) ? fgcol : colors[0];
+            } else { // MULTICOLOR
+                colors[3] = c & 0x07;
+                pixel = colors[(chr >> 6) & 0x03]; *p++ = pixel; if (p >= pe) break; *p++ = pixel; if (p >= pe) break;
+                pixel = colors[(chr >> 4) & 0x03]; *p++ = pixel; if (p >= pe) break; *p++ = pixel; if (p >= pe) break;
+                pixel = colors[(chr >> 2) & 0x03]; *p++ = pixel; if (p >= pe) break; *p++ = pixel; if (p >= pe) break;
+                pixel = colors[chr & 0x03];       *p++ = pixel; if (p >= pe) break; *p++ = pixel;
+            }
+        }
     }
     while (x<40) {BADLINE(x); x++;}
 };
@@ -376,7 +436,8 @@ __attribute__((section(".time_critical"))) void mode2(tpixel *p, const tpixel *p
         } while (p < pe);
     } else {
         // Versione senza sprite
-        while (p < pe - 8) {
+        while (p < pe) {
+            if (x >= 40) break;
             BADLINE(x);
             uint8_t t = cpu.vic.lineMemChr[x];
             fgcol = t >> 4;
@@ -384,22 +445,6 @@ __attribute__((section(".time_critical"))) void mode2(tpixel *p, const tpixel *p
             chr = bP[x * 8];
             x++;
 
-            *p++ = (chr & 0x80) ? fgcol : bgcol;
-            *p++ = (chr & 0x40) ? fgcol : bgcol;
-            *p++ = (chr & 0x20) ? fgcol : bgcol;
-            *p++ = (chr & 0x10) ? fgcol : bgcol;
-            *p++ = (chr & 0x08) ? fgcol : bgcol;
-            *p++ = (chr & 0x04) ? fgcol : bgcol;
-            *p++ = (chr & 0x02) ? fgcol : bgcol;
-            *p++ = (chr & 0x01) ? fgcol : bgcol;
-        };
-        // Gestione del resto della linea
-        while (p < pe) {
-                       BADLINE(x);
-            chr = cpu.vic.charsetPtr[cpu.vic.lineMemChr[x] * 8];
-            fgcol = cpu.vic.lineMemCol[x] & 0x0F;
-            x++;
-            
             *p++ = (chr & 0x80) ? fgcol : bgcol; if (p >= pe) break;
             *p++ = (chr & 0x40) ? fgcol : bgcol; if (p >= pe) break;
             *p++ = (chr & 0x20) ? fgcol : bgcol; if (p >= pe) break;
@@ -481,7 +526,8 @@ uint8_t bgcol = cpu.vic.B0C & 0x0F;
         } while (p < pe);
     } else {
         // Versione senza sprite
-        while (p < pe - 8) {
+        while (p < pe) {
+            if (x >= 40) break;
             colors[0] = cpu.vic.B0C & 0x0F;
 
             if (cpu.vic.idle) {
@@ -498,27 +544,19 @@ uint8_t bgcol = cpu.vic.B0C & 0x0F;
             }
             x++;
 
-            pixel = colors[(chr >> 6) & 0x03]; *p++ = pixel; *p++ = pixel;
-            pixel = colors[(chr >> 4) & 0x03]; *p++ = pixel; *p++ = pixel;
-            pixel = colors[(chr >> 2) & 0x03]; *p++ = pixel; *p++ = pixel;
-            pixel = colors[chr & 0x03];       *p++ = pixel; *p++ = pixel;
-        };
-        // Gestione del resto della linea
-        while (p < pe) {
-                        BADLINE(x);
-            chr = cpu.vic.charsetPtr[cpu.vic.lineMemChr[x] * 8];
-            uint8_t fgcol = cpu.vic.lineMemCol[x] & 0x0F;
-            x++;
-            
-            *p++ = (chr & 0x80) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x40) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x20) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x10) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x08) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x04) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x02) ? fgcol : bgcol; if (p >= pe) break;
-            *p++ = (chr & 0x01) ? fgcol : bgcol;
-        };
+            if (p + 8 <= pe) {
+                pixel = colors[(chr >> 6) & 0x03]; *p++ = pixel; *p++ = pixel;
+                pixel = colors[(chr >> 4) & 0x03]; *p++ = pixel; *p++ = pixel;
+                pixel = colors[(chr >> 2) & 0x03]; *p++ = pixel; *p++ = pixel;
+                pixel = colors[chr & 0x03];       *p++ = pixel; *p++ = pixel;
+            } else {
+                // Ultimo carattere parziale
+                pixel = colors[(chr >> 6) & 0x03]; *p++ = pixel; if (p >= pe) break; *p++ = pixel; if (p >= pe) break;
+                pixel = colors[(chr >> 4) & 0x03]; *p++ = pixel; if (p >= pe) break; *p++ = pixel; if (p >= pe) break;
+                pixel = colors[(chr >> 2) & 0x03]; *p++ = pixel; if (p >= pe) break; *p++ = pixel; if (p >= pe) break;
+                pixel = colors[chr & 0x03];       *p++ = pixel; if (p >= pe) break; *p++ = pixel;
+            }
+        }
     }
     while (x<40) {BADLINE(x); x++;}
 }
@@ -562,7 +600,8 @@ __attribute__((section(".time_critical"))) void mode4(tpixel *p, const tpixel *p
         } while (p < pe);
     } else {
         // Versione senza sprite
-        while (p < pe - 8) {
+        while (p < pe) {
+            if (x >= 40) break;
             BADLINE(x);
             uint32_t td = cpu.vic.lineMemChr[x];
             bgcol = cpu.vic.R[0x21 + ((td >> 6) & 0x03)] & 0x0F;
@@ -570,22 +609,6 @@ __attribute__((section(".time_critical"))) void mode4(tpixel *p, const tpixel *p
             fgcol = cpu.vic.lineMemCol[x] & 0x0F;
             x++;
 
-            *p++ = (chr & 0x80) ? fgcol : bgcol;
-            *p++ = (chr & 0x40) ? fgcol : bgcol;
-            *p++ = (chr & 0x20) ? fgcol : bgcol;
-            *p++ = (chr & 0x10) ? fgcol : bgcol;
-            *p++ = (chr & 0x08) ? fgcol : bgcol;
-            *p++ = (chr & 0x04) ? fgcol : bgcol;
-            *p++ = (chr & 0x02) ? fgcol : bgcol;
-            *p++ = (chr & 0x01) ? fgcol : bgcol;
-        };
-        // Gestione del resto della linea
-        while (p < pe) {
-                        BADLINE(x);
-            chr = cpu.vic.charsetPtr[cpu.vic.lineMemChr[x] * 8];
-            fgcol = cpu.vic.lineMemCol[x] & 0x0F;
-            x++;
-            
             *p++ = (chr & 0x80) ? fgcol : bgcol; if (p >= pe) break;
             *p++ = (chr & 0x40) ? fgcol : bgcol; if (p >= pe) break;
             *p++ = (chr & 0x20) ? fgcol : bgcol; if (p >= pe) break;
@@ -674,10 +697,14 @@ extern const char* keysets4[];
 extern const char* keysets5[];
 extern const char* keysets6[];
 extern const char** keysets[];
-extern const int keyset_lengths[] = { 26, 10, 21, 5, 8, 5, 5, 3 };
+extern const int keyset_lengths[];
 extern void audio_update();
 extern int skip;
-extern bool settings_edit_mode; 
+extern bool settings_active;
+extern int settings_cursor;
+extern char joy_str[];
+extern char vol_str[];
+extern char btn2_str[]; 
 
 __attribute__((section(".time_critical"))) void vic_do(void) {
 
@@ -789,7 +816,6 @@ C'è anche uno stato di cattiva linea, anche RC è impostato su zero.
 
   //max_x =  (!cpu.vic.CSEL) ? 40:38;
   p = &linebuffer[current_buffer][0];
-  pe = p + SCREEN_WIDTH;
   //Left Screenborder: Cycle 10
   spl = &cpu.vic.spriteLine[24];
   cpu_clock(6);
@@ -797,7 +823,8 @@ C'è anche uno stato di cattiva linea, anche RC è impostato su zero.
 
 if (cpu.vic.borderFlag) {
     cpu_clock(5);
-    fastFillLineNoSprites(p, pe + BORDER_RIGHT, cpu.vic.colors[0] & 0x0F); // Aggiungiamo & 0x0F per assicurarci sia un indice valido
+    pe = p + SCREEN_WIDTH;
+    fastFillLineNoSprites(p, pe + BORDER_RIGHT, cpu.vic.colors[0] & 0x0F);
     goto noDisplayIncRC;
 }
 
@@ -820,9 +847,11 @@ if (cpu.vic.borderFlag) {
       for (unsigned i = 0; i < xscroll; i++) {
         *p++ = col;
       }
-
     }
   }
+
+  // pe viene calcolato per scrivere esattamente (320 - xscroll) pixel nelle mode functions
+  pe = p + (SCREEN_WIDTH - xscroll);
 
   /*****************************************************************************************************/
 
@@ -929,21 +958,32 @@ if ((r >= FIRSTDISPLAYLINE && r <= LASTDISPLAYLINE)) {
 if ((r == LASTDISPLAYLINE)) {
   for (int i = 0; i < 20; i++) {
       display.waitSync();
+      // Tastiera virtuale
       if (keyboard_active && i >= 2 && i < 18) {
           int row = i - 2;
           uint16_t linebuf[480];
           const char** tokens = keysets[keyset_index];
           int token_count = keyset_lengths[keyset_index];
 
-          // giallo = 0xFFE0, rosso = 0xF800
-          uint16_t hl = (keyboard_active && keyset_index == 7 && settings_edit_mode) ? 0xF800 : 0xFFE0;
-
           display.drawTokenLineRow(linebuf, tokens, token_count, row, key_cursor,
                                    0xFFFF,    // fg bianco
                                    0x0000,    // bg nero
-                                   hl);       // highlight condizionale
+                                   0xFFE0);   // highlight giallo
           display.writeLine(linebuf);
-      } else {
+      }
+      // Menu settings indipendente
+      else if (settings_active && i >= 2 && i < 18) {
+          int row = i - 2;
+          uint16_t linebuf[480];
+          const char* settings_tokens[3] = { joy_str, vol_str, btn2_str };
+
+          display.drawTokenLineRow(linebuf, settings_tokens, 3, row, settings_cursor,
+                                   0xFFFF,    // fg bianco
+                                   0x0000,    // bg nero
+                                   0xF800);   // highlight rosso
+          display.writeLine(linebuf);
+      }
+      else {
           display.writeLine(buff_border);
       }
   }

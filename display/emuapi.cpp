@@ -96,11 +96,13 @@ int emu_SwapJoysticks(int statusOnly) {
 int emu_GetPad(void) {return(bLastState);}
 
 int emu_ReadKeys(void) {
-  uint16_t retval;
+  uint16_t retval = 0;
   
-  if ( !gpio_get(MASK_JOY2_LEFT) && !gpio_get(MASK_JOY2_RIGHT)  ) retval |= MASK_KEY_USER1;
-  if ( !gpio_get(MASK_JOY2_UP) && !gpio_get(MASK_JOY2_DOWN) ) retval |= MASK_KEY_USER2;
-  
+  // Abilita i tasti combinati solo quando il menu non è attivo (emulatore avviato)
+  if (!menuOn) {
+    if ( !gpio_get(MASK_JOY2_LEFT) && !gpio_get(MASK_JOY2_RIGHT)  ) retval |= MASK_KEY_USER1;
+    if ( !gpio_get(MASK_JOY2_UP) && !gpio_get(MASK_JOY2_DOWN) ) retval |= MASK_KEY_USER2;
+  }
   
   uint16_t j1 = readAnalogJoystick();
   uint16_t j2 = 0;
@@ -222,9 +224,9 @@ int end = std::min(nbFiles, start + MAX_MENULINES);
    // start = std::max(0, start);
     
 
-    // Pulisce solo l'area necessaria
+    // Pulisce l'intera area del menu per evitare residui della pagina precedente
     display.fillRectNoDma(MENU_FILE_XOFFSET, MENU_FILE_YOFFSET, 
-                        MENU_FILE_W, (end-start)*TEXT_HEIGHT, MENU_FILE_BGCOLOR);
+                        MENU_FILE_W, MENU_FILE_H, MENU_FILE_BGCOLOR);
 
     for (int i = start; i < end; i++) {
         int displayPos = i - start;
@@ -312,6 +314,14 @@ if (bCurState != 0) {
     lastKeyPressed = 0;
 }
 
+    // Ignora UP e DOWN se sono premuti contemporaneamente (USER2)
+    if ((bClick & MASK_JOY2_UP) && (bClick & MASK_JOY2_DOWN)) {
+        bClick &= ~(MASK_JOY2_UP | MASK_JOY2_DOWN);
+    }
+    if ((bClick & MASK_JOY1_UP) && (bClick & MASK_JOY1_DOWN)) {
+        bClick &= ~(MASK_JOY1_UP | MASK_JOY1_DOWN);
+    }
+
 
 
 
@@ -355,7 +365,7 @@ if (bCurState != 0) {
         if (curFile > 0) {
             curFile--;
             strcpy(selected_filename, files[curFile]);
-            int newTop = (curFile < MAX_MENULINES) ? 0 : (curFile - MAX_MENULINES / 2);
+            int newTop = (curFile / MAX_MENULINES) * MAX_MENULINES;
             if (newTop != topFile) {
                 topFile = newTop;
                 drawMenuItems();
@@ -369,7 +379,7 @@ if (bCurState != 0) {
         if (curFile < nbFiles - 1) {
             curFile++;
             strcpy(selected_filename, files[curFile]);
-            int newTop = (curFile < MAX_MENULINES) ? 0 : (curFile - MAX_MENULINES / 2);
+            int newTop = (curFile / MAX_MENULINES) * MAX_MENULINES;
             if (newTop != topFile) {
                 topFile = newTop;
                 drawMenuItems();
@@ -380,54 +390,25 @@ if (bCurState != 0) {
         }
     }
     else if ((bClick & MASK_JOY2_RIGHT) || (bClick & MASK_JOY1_RIGHT)) {
-        if ((curFile-9)>=0) {
-            curFile -= 9;
+        // Vai alla pagina precedente
+        int currentPage = curFile / MAX_MENULINES;
+        if (currentPage > 0) {
+            curFile = (currentPage - 1) * MAX_MENULINES;
             strcpy(selected_filename, files[curFile]);
-            int newTop = (curFile < MAX_MENULINES) ? 0 : (curFile - MAX_MENULINES / 2);
-            if (newTop != topFile) {
-                topFile = newTop;
-                drawMenuItems();
-            } else {
-                drawMenuLine(oldCurFile - topFile, oldCurFile);
-                drawMenuLine(curFile - topFile, curFile);
-            }
-        } else if (curFile!=0) {
-            curFile--;
-            strcpy(selected_filename, files[curFile]);
-            int newTop = (curFile < MAX_MENULINES) ? 0 : (curFile - MAX_MENULINES / 2);
-            if (newTop != topFile) {
-                topFile = newTop;
-                drawMenuItems();
-            } else {
-                drawMenuLine(oldCurFile - topFile, oldCurFile);
-                drawMenuLine(curFile - topFile, curFile);
-            }
+            topFile = (curFile / MAX_MENULINES) * MAX_MENULINES;
+            drawMenuItems();
         }
     }  
     else if ((bClick & MASK_JOY2_LEFT) || (bClick & MASK_JOY1_LEFT)) {
-        if ((curFile<(nbFiles-9)) && (nbFiles)) {
-            curFile += 9;
+        // Vai alla pagina successiva
+        int currentPage = curFile / MAX_MENULINES;
+        int maxPage = (nbFiles - 1) / MAX_MENULINES;
+        if (currentPage < maxPage) {
+            curFile = (currentPage + 1) * MAX_MENULINES;
+            if (curFile >= nbFiles) curFile = nbFiles - 1;
             strcpy(selected_filename, files[curFile]);
-            int newTop = (curFile < MAX_MENULINES) ? 0 : (curFile - MAX_MENULINES / 2);
-            if (newTop != topFile) {
-                topFile = newTop;
-                drawMenuItems();
-            } else {
-                drawMenuLine(oldCurFile - topFile, oldCurFile);
-                drawMenuLine(curFile - topFile, curFile);
-            }
-        }
-    else if ((curFile<(nbFiles-1)) && (nbFiles)) {
-            curFile++;
-            strcpy(selected_filename, files[curFile]);
-            int newTop = (curFile < MAX_MENULINES) ? 0 : (curFile - MAX_MENULINES / 2);
-            if (newTop != topFile) {
-                topFile = newTop;
-                drawMenuItems();
-            } else {
-                drawMenuLine(oldCurFile - topFile, oldCurFile);
-                drawMenuLine(curFile - topFile, curFile);
-            }
+            topFile = (curFile / MAX_MENULINES) * MAX_MENULINES;
+            drawMenuItems();
         }
     }
     else if ((bClick & MASK_KEY_USER1)) {

@@ -74,7 +74,7 @@ int main() {
   stdio_init_all();
   init_buffers();
   display.ili9486_gpio_init();
-  display.fillScreenNoDma( RGBVAL16(0xff,0x00,0x00) );
+  display.fillScreenNoDma( RGBVAL16(0x00,0x00,0xff) );
   emu_init();     
 
   char * filename;

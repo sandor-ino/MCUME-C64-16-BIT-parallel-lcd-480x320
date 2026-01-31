@@ -11,7 +11,7 @@
 #define FILEBROWSER
 
 // Title:     <                        >
-#define TITLE "  PiCo.MModore 64 Emulator  "
+#define TITLE "    Picommodore 64 Emulator   "
 #define ROMSDIR "c64"
 
 #define emu_Init(ROM) {c64_Start(ROM); c64_Init(); }

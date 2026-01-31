@@ -20,8 +20,12 @@
 #define MASK_JOY1_DOWN  0x0800
 #define MASK_JOY1_BTN   0x1000
 
+// Riduzione luminosità per evitare saturazione nel menù
+// Scegli uno dei seguenti valori (80 = 80% luminosità, 70 = 70%, ecc.)
+#define MENU_BRIGHTNESS 80  // Cambia questo valore tra 50 e 100
 
-#define RGBVAL16(r,g,b)  ( (((r>>3)&0x1f)<<11) | (((g>>2)&0x3f)<<5) | (((b>>3)&0x1f)<<0) )
+// Macro originale con riduzione luminosità
+#define RGBVAL16(r,g,b)  ( (((((r)*MENU_BRIGHTNESS/100)>>3)&0x1f)<<11) | (((((g)*MENU_BRIGHTNESS/100)>>2)&0x3f)<<5) | (((((b)*MENU_BRIGHTNESS/100)>>3)&0x1f)<<0) )
 
 #ifdef __cplusplus
 extern "C"
