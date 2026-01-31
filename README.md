@@ -1,6 +1,10 @@
 # MCUME-C64-16-BIT-parallel-lcd-480x320
 MCUME emulator modified to work with a 3.5 inch 16 bit parallel 480x320 LCD 
 
+2026 update:
+fixed corruption on last column
+improved menu functionality
+
 original code:  github.com/Jean-MarcHarvengt/MCUME/
 
 test video : https://youtu.be/2G1GnmDUAys
@@ -15,11 +19,15 @@ SD player integrated in LCD is used in this project. A folder C64 must be create
 
 Virtual keyboard:
 
-virtual keyboard is activated/deactivated by pressing button 3, scrolling through keys you pass from one keyset to another. A special line allows: 1. Set the joystik door, 2. Adjust volume, 3. Associate a command for button 2 between letters, numbers or space button.
+virtual keyboard is activated by pressing button 3 pressed for a long time, scrolling through keys you pass from one keyset to another.
+
+Menù setting:
+
+Menù setting is activated by pressing button 2 pressed for a long time, 1. Set the joystik door, 2. Adjust volume, 3. Associate a command for button 2 between letters, numbers or space button.
 
 Things to complete:
 
-When virtal keyboard is active joystick must be deactivated, button 2 must also work during game, Last corrupt column sometimes, Improve Virtual Keyboard display (space between commands), Improve organizing code, wording "miso mosi" reversed in code, Improve SD menu (subfolder/page change) ...
+Improve organizing code, wording "miso mosi" reversed in code, ...
 
 ![3](https://github.com/user-attachments/assets/c9aa5146-7f3e-478d-b34e-6f11d903c62c)
 ![2](https://github.com/user-attachments/assets/4aa11672-8a7d-4ef9-bb95-c2f06c6e5b6d)
